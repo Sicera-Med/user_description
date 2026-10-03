@@ -1,0 +1,1030 @@
+{
+  "meta": {
+    "source": "БФТ_15.09.2026_1.pdf",
+    "source_section": "Приложение 11",
+    "scope": [
+      "ct_chest",
+      "xray_chest",
+      "mammography"
+    ],
+    "purpose": "Schema-guided extraction из текстовых разделов DICOM SR. Без маршрутизации и без внешних медицинских норм.",
+    "requiredness_values": {
+      "required": "БФТ: Обязательно",
+      "optional": "БФТ: Опционально",
+      "conditional": "условие из БФТ",
+      "grouping": "группирующий элемент",
+      "not_specified": "обязательность явно не указана в извлеченном тексте БФТ"
+    }
+  },
+  "ct_chest": {
+    "label": "КТ ОГК",
+    "bft_section": "11.1",
+    "source_pages": [
+      112,
+      113
+    ],
+    "fields": {
+      "lung_tissue": {
+        "label": "Легочная ткань",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "очаг(и)",
+          "инфильтрация/консолидация",
+          "ателектаз/фиброз",
+          "интерстициальные изменения",
+          "эмфизема",
+          "кальцинаты/кальцинированные очаги"
+        ],
+        "requiredness": "required",
+        "bft_no": "1",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "right_lung_description": {
+        "label": "Описание правое легкое",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "2",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "left_lung_description": {
+        "label": "Описание левое легкое",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "3",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "trachea_bronchi": {
+        "label": "Трахея и бронхи",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "бронхоэктазы",
+          "инородные тела/образования бронхов"
+        ],
+        "requiredness": "required",
+        "bft_no": "4",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "right_tracheobronchial_description": {
+        "label": "Описание правое легкое",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "5",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "left_tracheobronchial_description": {
+        "label": "Описание левое легкое",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "6",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "pleural_cavities": {
+        "label": "Плевральные полости",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "гидроторакс",
+          "пневмоторакс",
+          "фиброторакс"
+        ],
+        "requiredness": "required",
+        "bft_no": "7",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "right_pleural_description": {
+        "label": "Описание правой плевральной полости",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "8",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения объема"
+      },
+      "left_pleural_description": {
+        "label": "Описание левой плевральной полости",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "9",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения объема"
+      },
+      "mediastinum": {
+        "label": "Средостение",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "лимфоаденопатия ВГЛУ",
+          "расширение средостения/медиастинит/пневмомедиастинум"
+        ],
+        "requiredness": "required",
+        "bft_no": "10",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "mediastinum_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "11",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "heart_major_vessels": {
+        "label": "Сердце и крупные сосуды",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "кальциноз коронарных артерий",
+          "гидроперикард",
+          "признаки стеноза/обызвествления аортального клапана",
+          "увеличение объема паракардиального жира",
+          "аневризма/дилатация грудной аорты",
+          "расширение легочного ствола"
+        ],
+        "requiredness": "required",
+        "bft_no": "12",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "heart_major_vessels_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "13",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "bone_structures": {
+        "label": "Костные структуры",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "«свежий» перелом ребра/ребер",
+          "консолидированный перелом ребра/ребер",
+          "очаговые изменения костной структуры",
+          "компрессионный перелом тела позвонка(-ов)"
+        ],
+        "requiredness": "required",
+        "bft_no": "14",
+        "multiple": true,
+        "constraints": [
+          "«не выявлено признаков патологии» не комбинируется с другими значениями"
+        ]
+      },
+      "bone_structures_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "15",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "adrenals": {
+        "label": "Надпочечники",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "структурные изменения тела и/или ножек надпочечника"
+        ],
+        "requiredness": "not_specified",
+        "bft_no": "16"
+      },
+      "right_adrenal_description": {
+        "label": "Описание правого надпочечника",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "17",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "left_adrenal_description": {
+        "label": "Описание левого надпочечника",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "18",
+        "condition": "обязательно при выявлении патологии, иначе не выводится",
+        "content_hint": "локализация и характер изменений, измерения"
+      },
+      "thyroid": {
+        "label": "Щитовидная железа",
+        "type": "enum_multi",
+        "allowed_values": [
+          "не выявлено признаков патологии",
+          "увеличена",
+          "образование",
+          "состояние после операции/удаления"
+        ],
+        "requiredness": "optional",
+        "bft_no": "19",
+        "multiple": true
+      },
+      "thyroid_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "20",
+        "content_hint": "локализация и характер изменений"
+      },
+      "conclusion": {
+        "label": "ЗАКЛЮЧЕНИЕ",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "required",
+        "bft_no": "Заключение.1",
+        "content_hint": "перечисление дифференцированного ряда патологий, наиболее соответствующих набору выявленных признаков",
+        "notes": [
+          "В случае двусторонней патологии указывать формулировку «двусторонний» с уточнением."
+        ]
+      },
+      "recommendations": {
+        "label": "Рекомендации",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "Заключение.2"
+      },
+      "additional_examination": {
+        "label": "Дообследование",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "Заключение.3"
+      }
+    }
+  },
+  "mammography": {
+    "label": "Маммография",
+    "bft_section": "11.2",
+    "source_pages": [
+      114,
+      115
+    ],
+    "fields": {
+      "pgmi_quality": {
+        "label": "Качество выполненного исследования (по PGMI)",
+        "type": "enum",
+        "allowed_values": [
+          "P (превосходное)",
+          "G (хорошее)",
+          "M (удовлетворительное)",
+          "I (неудовлетворительное)"
+        ],
+        "requiredness": "required",
+        "bft_no": "1"
+      },
+      "right_breast": {
+        "label": "Правая молочная железа",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "grouping",
+        "bft_no": "2"
+      },
+      "right_acr_density": {
+        "label": "Рентгенологическая плотность структуры (по ACR)",
+        "type": "enum",
+        "allowed_values": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.1"
+      },
+      "right_skin": {
+        "label": "Кожа",
+        "type": "enum",
+        "allowed_values": [
+          "не изменены",
+          "изменены"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.2"
+      },
+      "right_calcifications": {
+        "label": "Кальцинаты",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "grouping",
+        "bft_no": "2.3"
+      },
+      "right_benign_calcifications": {
+        "label": "Кальцинаты доброкачественные",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.4"
+      },
+      "right_suspicious_calcifications": {
+        "label": "Кальцинаты подозрительные",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.5"
+      },
+      "right_suspicious_calcifications_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "2.5.1",
+        "condition": "при значении 2.5 «выявлены»",
+        "multiple": true
+      },
+      "right_calcification_distribution": {
+        "label": "Распределение кальцинатов",
+        "type": "enum_multi",
+        "allowed_values": [
+          "единичные разбросанные",
+          "диффузное",
+          "региональное",
+          "сегментарное",
+          "линейное",
+          "сгруппированные (кластер)",
+          "в структуре образования"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "2.5.2",
+        "condition": "при значении 2.5 «выявлены»",
+        "multiple": true
+      },
+      "right_mass": {
+        "label": "Образования",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.6"
+      },
+      "right_mass_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "2.6.1",
+        "condition": "при значении 2.6 «выявлены»",
+        "multiple": true
+      },
+      "right_architectural_distortion": {
+        "label": "Нарушение архитектоники ткани",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлено",
+          "выявлено"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.7"
+      },
+      "right_architectural_distortion_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "2.7.1",
+        "condition": "при значении 2.7 «выявлено»",
+        "multiple": true
+      },
+      "right_axillary_nodes": {
+        "label": "Аксиллярные лимфатические узлы",
+        "type": "enum",
+        "allowed_values": [
+          "не определяются",
+          "определяются, не изменены",
+          "определяются, изменены"
+        ],
+        "requiredness": "required",
+        "bft_no": "2.8"
+      },
+      "left_breast": {
+        "label": "Левая молочная железа",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "grouping",
+        "bft_no": "3"
+      },
+      "left_acr_density": {
+        "label": "Рентгенологическая плотность структуры (по ACR)",
+        "type": "enum",
+        "allowed_values": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.1"
+      },
+      "left_skin": {
+        "label": "Кожа",
+        "type": "enum",
+        "allowed_values": [
+          "не изменены",
+          "изменены"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.2"
+      },
+      "left_calcifications": {
+        "label": "Кальцинаты",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "grouping",
+        "bft_no": "3.3"
+      },
+      "left_benign_calcifications": {
+        "label": "Кальцинаты доброкачественные",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.4"
+      },
+      "left_suspicious_calcifications": {
+        "label": "Кальцинаты подозрительные",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.5"
+      },
+      "left_suspicious_calcifications_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "3.5.1",
+        "condition": "при значении 3.5 «выявлены»",
+        "multiple": true
+      },
+      "left_calcification_distribution": {
+        "label": "Распределение кальцинатов",
+        "type": "enum_multi",
+        "allowed_values": [
+          "единичные разбросанные",
+          "диффузное",
+          "региональное",
+          "сегментарное",
+          "линейное",
+          "сгруппированные (кластер)",
+          "в структуре образования"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "3.5.2",
+        "condition": "при значении 3.5 «выявлены»",
+        "multiple": true
+      },
+      "left_mass": {
+        "label": "Образования",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.6"
+      },
+      "left_mass_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "3.6.1",
+        "condition": "при значении 3.6 «выявлены»",
+        "multiple": true
+      },
+      "left_architectural_distortion": {
+        "label": "Нарушение архитектоники ткани",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлено",
+          "выявлено"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.7"
+      },
+      "left_architectural_distortion_quadrants": {
+        "label": "Квадранты",
+        "type": "enum_multi",
+        "allowed_values": [
+          "верхне-наружный",
+          "нижне-наружный",
+          "верхне-внутренний",
+          "нижне-внутренний",
+          "на границе квадрантов"
+        ],
+        "requiredness": "conditional",
+        "bft_no": "3.7.1",
+        "condition": "при значении 3.7 «выявлено»",
+        "multiple": true
+      },
+      "left_axillary_nodes": {
+        "label": "Аксиллярные лимфатические узлы",
+        "type": "enum",
+        "allowed_values": [
+          "не определяются",
+          "определяются, не изменены",
+          "определяются, изменены"
+        ],
+        "requiredness": "required",
+        "bft_no": "3.8"
+      },
+      "conclusion": {
+        "label": "Заключение",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "grouping",
+        "bft_no": "4"
+      },
+      "right_birads": {
+        "label": "Правая молочная железа",
+        "type": "enum",
+        "allowed_values": [
+          "BI-RADS 1",
+          "BI-RADS 2",
+          "BI-RADS 3",
+          "BI-RADS 4",
+          "BI-RADS 5"
+        ],
+        "requiredness": "required",
+        "bft_no": "4.1"
+      },
+      "left_birads": {
+        "label": "Левая молочная железа",
+        "type": "enum",
+        "allowed_values": [
+          "BI-RADS 1",
+          "BI-RADS 2",
+          "BI-RADS 3",
+          "BI-RADS 4",
+          "BI-RADS 5"
+        ],
+        "requiredness": "required",
+        "bft_no": "4.2"
+      }
+    }
+  },
+  "xray_chest": {
+    "label": "РГ ОГК",
+    "bft_section": "11.4",
+    "source_pages": [
+      118,
+      119
+    ],
+    "fields": {
+      "lung_field_transparency": {
+        "label": "Прозрачность легочных полей",
+        "type": "enum",
+        "allowed_values": [
+          "сохранена",
+          "снижена за счет",
+          "повышена"
+        ],
+        "requiredness": "required",
+        "bft_no": "1",
+        "conditions": [
+          "«снижена за счет» при наличии значений пп. 1.1, 1.2, 1.3, 1.5",
+          "«повышена» при наличии значений п. 1.4"
+        ]
+      },
+      "focal_changes": {
+        "label": "Очаговые изменения",
+        "type": "enum",
+        "allowed_values": [
+          "единичного очага",
+          "множественных очагов",
+          "очаговых изменений"
+        ],
+        "requiredness": "required",
+        "bft_no": "1.1"
+      },
+      "focal_changes_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "1.1.1",
+        "condition": "отображается, если п. 1.1 (Очаговые изменения) выбран",
+        "content_hint": "локализация, тип признака"
+      },
+      "infiltrative_changes": {
+        "label": "Инфильтративные изменения",
+        "type": "enum",
+        "allowed_values": [
+          "инфильтрации/консолидации"
+        ],
+        "requiredness": "required",
+        "bft_no": "1.2"
+      },
+      "infiltrative_changes_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "1.2.1",
+        "condition": "отображается, если п. 1.2 = инфильтрации/консолидации",
+        "content_hint": "локализация"
+      },
+      "atelectasis": {
+        "label": "Ателектаз",
+        "type": "enum",
+        "allowed_values": [
+          "ателектаза"
+        ],
+        "requiredness": "not_specified",
+        "bft_no": "1.3",
+        "notes": [
+          "В БФТ: «при возможности различия видов – возможны»."
+        ]
+      },
+      "atelectasis_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "1.3.1",
+        "condition": "отображается, если п. 1.3 = ателектаза",
+        "content_hint": "локализация",
+        "notes": [
+          "В исходной таблице комментарий называет п.1.3 «Инфильтративные изменения»; номер сохранен как в БФТ."
+        ]
+      },
+      "pneumothorax": {
+        "label": "Пневмоторакс",
+        "type": "enum",
+        "allowed_values": [
+          "признаки свободного воздуха в плевральной полости"
+        ],
+        "requiredness": "required",
+        "bft_no": "1.4"
+      },
+      "pneumothorax_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "1.4.1",
+        "condition": "отображается, если п. 1.4 = признаки свободного воздуха в плевральной полости",
+        "content_hint": "локализация"
+      },
+      "hydrothorax": {
+        "label": "Гидроторакс",
+        "type": "enum",
+        "allowed_values": [
+          "признаков плеврального выпота"
+        ],
+        "requiredness": "required",
+        "bft_no": "1.5"
+      },
+      "hydrothorax_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "1.5.1",
+        "condition": "отображается, если п. 1.5 = признаков плеврального выпота",
+        "content_hint": "локализация"
+      },
+      "lung_pattern": {
+        "label": "Легочный рисунок",
+        "type": "enum",
+        "allowed_values": [
+          "без особенностей",
+          "усилен",
+          "деформирован",
+          "обеднён"
+        ],
+        "requiredness": "optional",
+        "bft_no": "2"
+      },
+      "lung_pattern_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "3",
+        "condition": "отображается, если п.2 <> «без особенностей»",
+        "content_hint": "локализация, характер изменений"
+      },
+      "lung_roots": {
+        "label": "Корни легких",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "4"
+      },
+      "lung_roots_expansion": {
+        "label": "Расширены",
+        "type": "enum",
+        "allowed_values": [
+          "не расширены",
+          "расширены"
+        ],
+        "requiredness": "optional",
+        "bft_no": "4.1"
+      },
+      "lung_roots_structure": {
+        "label": "Структурность",
+        "type": "enum",
+        "allowed_values": [
+          "структурны",
+          "не структурны"
+        ],
+        "requiredness": "optional",
+        "bft_no": "4.2"
+      },
+      "diaphragm": {
+        "label": "Диафрагма",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "5",
+        "condition": "при наличии значений п. 5.1-5.3"
+      },
+      "diaphragm_contours": {
+        "label": "Контуры",
+        "type": "enum",
+        "allowed_values": [
+          "четкие",
+          "нечеткие"
+        ],
+        "requiredness": "optional",
+        "bft_no": "5.1"
+      },
+      "diaphragm_relaxation": {
+        "label": "Релаксация",
+        "type": "enum",
+        "allowed_values": [
+          "релаксация"
+        ],
+        "requiredness": "optional",
+        "bft_no": "5.2"
+      },
+      "diaphragm_relaxation_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "5.2.1",
+        "condition": "в БФТ указано: отображается, если 5.3 = релаксация",
+        "content_hint": "сторона",
+        "notes": [
+          "В таблице ссылка на 5.3 при номере поля «Релаксация» 5.2; не исправлено догадкой."
+        ]
+      },
+      "pleural_sinuses": {
+        "label": "Плевральные синусы",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "required",
+        "bft_no": "6",
+        "condition": "соответственно 1.5"
+      },
+      "right_pleural_sinus": {
+        "label": "Справа",
+        "type": "enum",
+        "allowed_values": [
+          "свободный",
+          "затемнен",
+          "облитерирован"
+        ],
+        "requiredness": "required",
+        "bft_no": "6.1"
+      },
+      "left_pleural_sinus": {
+        "label": "Слева",
+        "type": "enum",
+        "allowed_values": [
+          "свободный",
+          "затемнен",
+          "облитерирован"
+        ],
+        "requiredness": "required",
+        "bft_no": "6.2"
+      },
+      "subdiaphragmatic_gas": {
+        "label": "Наличие газа под куполом диафрагмы",
+        "type": "enum",
+        "allowed_values": [
+          "нет",
+          "да"
+        ],
+        "requiredness": "optional",
+        "bft_no": "6.3"
+      },
+      "mediastinum": {
+        "label": "Средостение",
+        "type": "enum",
+        "allowed_values": [
+          "не изменено",
+          "расширено",
+          "пневмомедиастинум"
+        ],
+        "requiredness": "required",
+        "bft_no": "7"
+      },
+      "mediastinum_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "7.1",
+        "content_hint": "локализация, характер расширения"
+      },
+      "heart_shadow": {
+        "label": "Тень сердца",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "required",
+        "bft_no": "8"
+      },
+      "heart_shadow_expansion": {
+        "label": "Расширение",
+        "type": "enum",
+        "allowed_values": [
+          "не расширена",
+          "расширена"
+        ],
+        "requiredness": "required",
+        "bft_no": "8.1"
+      },
+      "cardiothoracic_index": {
+        "label": "Описание",
+        "type": "number",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "8.2",
+        "condition": "отображается, если п.8.1 (Расширение) = расширена",
+        "content_hint": "значение КТИ"
+      },
+      "aorta": {
+        "label": "Аорта",
+        "type": "group",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "9"
+      },
+      "aorta_changes": {
+        "label": "Изменения",
+        "type": "enum",
+        "allowed_values": [
+          "не изменена",
+          "расширена/развернута",
+          "удлинена"
+        ],
+        "requiredness": "optional",
+        "bft_no": "9.1"
+      },
+      "aortic_wall_calcifications": {
+        "label": "Кальцинаты стенки аорты",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "optional",
+        "bft_no": "9.2"
+      },
+      "rib_traumatic_changes": {
+        "label": "Травматические изменения ребер",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "required",
+        "bft_no": "10"
+      },
+      "rib_traumatic_changes_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "10.1",
+        "condition": "отображается, если п.10 = выявлены",
+        "content_hint": "локализация"
+      },
+      "other_bone_traumatic_changes": {
+        "label": "Травматические изменения костных структур (ключицы, позвоночник)",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "optional",
+        "bft_no": "11"
+      },
+      "other_pathological_changes": {
+        "label": "Прочие патологические изменения",
+        "type": "enum",
+        "allowed_values": [
+          "не выявлены",
+          "выявлены"
+        ],
+        "requiredness": "optional",
+        "bft_no": "12"
+      },
+      "other_pathological_changes_description": {
+        "label": "Описание",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "conditional",
+        "bft_no": "12.1",
+        "condition": "отображается, если п.12 = выявлены"
+      },
+      "conclusion": {
+        "label": "Заключение",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "required",
+        "bft_no": "13",
+        "content_hint": "перечисление дифференциального ряда патологий, наиболее соответствующих набору выявленных рентгеновских признаков"
+      },
+      "recommendations": {
+        "label": "Рекомендации",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "14"
+      },
+      "additional_examination": {
+        "label": "Дообследование",
+        "type": "free_text",
+        "allowed_values": null,
+        "requiredness": "optional",
+        "bft_no": "15"
+      }
+    }
+  }
+}

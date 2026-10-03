@@ -7,13 +7,13 @@ import time
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
+from bft_templates import find_template, render_template
+
 load_dotenv()
 client = InferenceClient(token=os.environ["HF_TOKEN"])
 
 MODELS = [
     "Qwen/Qwen2.5-72B-Instruct"]
-
-STUDY_TYPES = {"xray": "рентгенография ОГК", "ct_chest": "КТ ОГК"}
 
 # Словарь сокращений: глоссарий БФТ ДЗМ (стр. 4) + шкалы и обозначения из текста БФТ
 ABBREVIATIONS = {
@@ -82,6 +82,9 @@ SYSTEM_PROMPT = """Ты — ассистент врача (система под
 9. Пиши по-русски, медицинской терминологией, без англицизмов (не "бенигный", а "доброкачественный").
 10. Шкалы (BI-RADS, Lung-RADS, CAC-DRS и т.п.) трактуй строго по их категориям,
     не завышай и не занижай.
+11. Ниже дан шаблон протокола для этого типа исследования. Называй находки так, как в шаблоне.
+    Если обязательного поля шаблона нет в протоколе — укажи это в missing_data.
+    Поля, которых нет в протоколе, не считай нормой и не додумывай.
 
 Сокращения:
 """ + "\n".join(f"- {k}: {v}" for k, v in ABBREVIATIONS.items()) + """
@@ -115,7 +118,8 @@ def load_tests(path):
 
 
 def build_input(t):
-    parts = [f"Тип исследования: {STUDY_TYPES.get(t['study_type'], t['study_type'])}"]
+    tpl = find_template(t["study_type"])
+    parts = [f"Тип исследования: {tpl['label'] if tpl else t['study_type']}"]
     if t.get("description"):
         parts.append(f"Описание:\n{t['description']}")
     if t.get("conclusion"):
@@ -123,12 +127,17 @@ def build_input(t):
     return "\n\n".join(parts)
 
 
-def ask(model, text):
+def system_prompt_for(study_type):
+    """Общий промт + только шаблон нужного типа исследования."""
+    return SYSTEM_PROMPT + "\n\n" + render_template(study_type)
+
+
+def ask(model, t):
     resp = client.chat_completion(
         model=model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text},
+            {"role": "system", "content": system_prompt_for(t["study_type"])},
+            {"role": "user", "content": build_input(t)},
         ],
         max_tokens=1024,
         temperature=0.2,
@@ -152,7 +161,7 @@ def main(tests_path="tests.md"):
         for t in tests:
             start = time.time()
             try:
-                raw = ask(model, build_input(t))
+                raw = ask(model, t)
             except Exception as e:
                 raw = f"ERROR: {e}"
             parsed = parse_json(raw)
