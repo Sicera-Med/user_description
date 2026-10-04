@@ -102,6 +102,15 @@ def render_guidelines(key, report_text=None, full=False):
     return "\n".join(lines)
 
 
+def entry_supports(entry_id, type_, code=None):
+    """Есть ли в записи действие этого типа (и с этим кодом, если он задан)."""
+    for entries in GUIDELINES.values():
+        for e in entries:
+            if e["id"] == entry_id:
+                return any(a["type"] == type_ and (code is None or a["code"] == code) for a in e["actions"])
+    return False
+
+
 def cite(entry_id):
     """Ссылка по id записи: документ, организация, год, страницы. Не найдено — None."""
     for entries in GUIDELINES.values():

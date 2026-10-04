@@ -12,8 +12,8 @@ from bft_templates import TEMPLATES, find_template, render_template
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_TESTS_PATH = os.path.join(BASE_DIR, "tests.md")
-RESULTS_PATH = os.path.join(BASE_DIR, "results_b2c.json")
+DEFAULT_TESTS_PATH = os.path.join(BASE_DIR, "tests", "tests.md")
+RESULTS_DIR = os.path.join(BASE_DIR, "tests", "results")  # новый файл на каждый прогон
 # Заглушка: ссылка на страницу результата появится, когда будет сайт
 RESULTS_URL = "https://example.com/results/{study_id}"
 
@@ -414,6 +414,10 @@ def build_site_summary(t, parsed):
 
 
 def main(tests_path=DEFAULT_TESTS_PATH):
+    if not os.path.exists(tests_path):  # «tests.md» → tests/tests.md
+        tests_path = os.path.join(BASE_DIR, "tests", tests_path)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    results_path = os.path.join(RESULTS_DIR, f"results_b2c_{time.strftime('%Y%m%d_%H%M%S')}.json")
     tests = load_tests(tests_path)
     for t in tests:  # ошибки в решениях врача — до запросов к модели
         build_next_step(t.get("doctor_decision"))
@@ -457,7 +461,7 @@ def main(tests_path=DEFAULT_TESTS_PATH):
             )
 
     with open(
-        RESULTS_PATH,
+        results_path,
         "w",
         encoding="utf-8"
     ) as f:
@@ -470,7 +474,7 @@ def main(tests_path=DEFAULT_TESTS_PATH):
 
     print(
         f"\nB2C results saved to: "
-        f"{RESULTS_PATH}"
+        f"{results_path}"
     )
 
 

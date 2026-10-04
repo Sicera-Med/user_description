@@ -1,4 +1,7 @@
-"""Прогон тестов из tests.md через модели из .env (промт и проверка ответа — analysis.py)."""
+"""Прогон тестов из tests/tests.md через модели из .env (промт и проверка ответа — analysis.py).
+
+Результаты — новый файл на каждый прогон в tests/results/.
+"""
 import json
 import os
 import re
@@ -8,7 +11,16 @@ import time
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from analysis import attach_sources, build_messages, guidelines_partial, parse_json, validate
+from analysis import attach_sources, build_messages, guidelines_partial, parse_json, sources_of, validate
+
+TESTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tests")
+RESULTS_DIR = os.path.join(TESTS_DIR, "results")
+
+
+def tests_file(path):
+    """Путь к файлу тестов: как указан или по имени из папки tests/ («tests.md» → tests/tests.md)."""
+    return path if os.path.exists(path) else os.path.join(TESTS_DIR, path)
+
 
 load_dotenv()
 client = InferenceClient(token=os.environ["HF_TOKEN"])
@@ -41,15 +53,16 @@ def check_expected(parsed, expected):
     """Ожидания из справочника.
 
     must_include — список групп; в каждой группе должен найтись хотя бы один элемент:
-    {"code", "source"} — пункт варианта, {"type", "source"} — сам вариант (например, повторный приём).
+    {"code", "source"} — пункт варианта, {"type", "source"} — сам вариант (например, повторный приём);
+    source должен быть среди sources этого пункта/варианта.
     must_not — коды, которых не должно быть ни в одном пункте.
     """
     if not expected:
         return None
     options = [o for o in (parsed or {}).get("options", []) if isinstance(o, dict)]
     items = [i for o in options for i in o.get("items") or [] if isinstance(i, dict)]
-    got = {("code", i.get("code"), i.get("source")) for i in items}
-    got |= {("type", o.get("type"), o.get("source")) for o in options}
+    got = {("code", i.get("code"), src) for i in items for src in sources_of(i)}
+    got |= {("type", o.get("type"), src) for o in options for src in sources_of(o)}
     key = lambda g: ("code", g["code"], g["source"]) if "code" in g else ("type", g["type"], g["source"])
     problems = [f"нет ни одного из {[(g.get('code') or g.get('type')) + '/' + g['source'] for g in group]}"
                 for group in expected.get("must_include", []) if not any(key(g) in got for g in group)]
@@ -82,7 +95,7 @@ def ask(model, t):
 
 def main(tests_path="tests.md", *only_ids):
     """python test_of_models.py tests.md mmg_101 ct_chest_101 — только перечисленные тесты."""
-    tests = load_tests(tests_path)
+    tests = load_tests(tests_file(tests_path))
     if only_ids:
         tests = [t for t in tests if t["id"] in only_ids]
     results = []
@@ -116,7 +129,8 @@ def main(tests_path="tests.md", *only_ids):
                 + f"справочник: {mode} {results[-1]['sec']}s"
             )
 
-    out = f"results_{time.strftime('%Y%m%d_%H%M%S')}.json"  # не затирать прошлые прогоны
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    out = os.path.join(RESULTS_DIR, f"results_models_{time.strftime('%Y%m%d_%H%M%S')}.json")  # новый файл на прогон
     with open(out, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"Результаты: {out}")

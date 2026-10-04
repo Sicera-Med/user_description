@@ -3,7 +3,7 @@ import json
 import re
 
 from bft_templates import TEMPLATES, find_template, render_template
-from guidelines import cite, entry_ids, guideline_key, render_guidelines, select_entries
+from guidelines import cite, entry_ids, entry_supports, guideline_key, render_guidelines, select_entries
 
 # Справочники кодов, которыми модель отвечает
 RECOMMENDATION_TYPES = {
@@ -115,11 +115,13 @@ SYSTEM_PROMPT = """Ты — ассистент врача (система под
 7. Ниже дан шаблон протокола для этого типа исследования. Называй находки так, как в шаблоне.
    Поля, которых нет в протоколе, не считай нормой и не додумывай.
 8. Ниже дан справочник «находка → действие» из официальных документов.
-   - Если находка есть в справочнике, бери действия и сроки оттуда и укажи source = id записи.
+   - Если находка есть в справочнике, бери действия и сроки оттуда и укажи в sources id записи.
+     Если действие подтверждают несколько записей (например, разные документы) — перечисли все.
    - Учитывай условия (!) и ограничения записи: например, область применения шкалы.
      Если условие не выполнено или по протоколу его нельзя проверить — скажи об этом в rationale.
    - Действия, которых нет в справочнике, добавляй только если они следуют из протокола,
-     и ставь source = null: врач увидит, что это предложение модели, а не документа.
+     и ставь sources = []: врач увидит, что это предложение модели, а не документа.
+   - В sources указывай только записи, в которых это действие (этот код) действительно есть.
    - timing — срок из справочника; если в справочнике срока нет — null, не придумывай.
    - Если справочник показан частично и для значимой находки нет записи или данных не хватает
      для решения — добавь в ответ "need_full_guidelines": true (остальные поля заполни как сможешь).
@@ -143,17 +145,17 @@ SYSTEM_PROMPT = """Ты — ассистент врача (система под
       "type": "specialist_consult",
       "recommended": true,
       "items": [
-        {"code": "cardiologist", "reason": "Кардиомегалия, КТИ 0,6", "timing": null, "source": null},
-        {"code": "...", "reason": "другая находка из протокола", "timing": null, "source": null}
+        {"code": "cardiologist", "reason": "Кардиомегалия, КТИ 0,6", "timing": null, "sources": []},
+        {"code": "...", "reason": "другая находка из протокола", "timing": null, "sources": []}
       ],
-      "source": null,
+      "sources": [],
       "rationale": "почему этот вариант, 1–2 предложения"
     },
     {
       "type": "additional_research",
       "recommended": false,
-      "items": [{"code": "ldct", "reason": "Солидный очаг 9 мм", "timing": "через 3 месяца", "source": "lungrads_4a"}],
-      "source": null,
+      "items": [{"code": "ldct", "reason": "Солидный очаг 9 мм", "timing": "через 3 месяца", "sources": ["lungrads_4a"]}],
+      "sources": [],
       "rationale": "..."
     }
   ],
@@ -174,10 +176,12 @@ def guidelines_partial(study_type, report_text):
     return bool(key) and select_entries(key, report_text)[1]
 
 
-def build_messages(study_type, report_text, patient_context=None, full_guidelines=False):
+def build_messages(study_type, report_text, patient_context=None, full_guidelines=False,
+                   use_bft=True, use_guidelines=True):
     """Системный промт + шаблон этого типа исследования + справочник; в сообщении — протокол.
 
     Справочник — по словам из match (full_guidelines=False) или целиком (True).
+    use_bft / use_guidelines = False — без шаблона БФТ / без справочника (сравнение в tests/test_modes.py).
     """
     key = template_key(study_type)
     label = TEMPLATES[key]["label"] if key else study_type
@@ -189,6 +193,10 @@ def build_messages(study_type, report_text, patient_context=None, full_guideline
         user.append(f"Пациент: возраст {ctx.get('age', 'не указан')}, пол {sex}")
     user.append(f"Протокол:\n{report_text}")
     guide = render_guidelines(guideline_key(study_type, key), report_text, full=full_guidelines)
+    if not use_bft:
+        template = "Шаблона протокола нет."
+    if not use_guidelines:
+        guide = "Справочника нет: у всех действий source = null."
     return [
         {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + template + "\n\n" + guide},
         {"role": "user", "content": "\n\n".join(user)},
@@ -212,10 +220,18 @@ ITEM_CODES = {
 }
 
 
+def sources_of(x):
+    """id источников пункта/варианта: список sources; старый формат source (строка) тоже принимается."""
+    if isinstance(x.get("sources"), list):
+        return [i for i in x["sources"] if i]
+    return [x["source"]] if x.get("source") else []
+
+
 def validate(parsed, study_type=None):
     """Список нарушений формата ответа; пустой — ответ корректен.
 
-    study_type задан — source должен быть id записи справочника этого типа исследования или null.
+    study_type задан — каждый id в sources должен быть записью справочника этого типа исследования.
+    Соответствие действия записи проверяет attach_sources (неподтверждённые ссылки не ошибка формата).
     """
     if not isinstance(parsed, dict):
         return ["ответ модели не JSON-объект"]
@@ -242,10 +258,10 @@ def validate(parsed, study_type=None):
         if not isinstance(o, dict) or o.get("type") not in ITEM_CODES:
             continue
         if known is not None:
-            bad = [x.get("source") for x in [o, *(o.get("items") or [])]
-                   if isinstance(x, dict) and x.get("source") not in (None, *known)]
+            bad = [i for x in [o, *(o.get("items") or [])] if isinstance(x, dict)
+                   for i in sources_of(x) if i not in known]
             if bad:
-                errors.append(f"{o['type']}: source не из справочника: {bad}")
+                errors.append(f"{o['type']}: sources не из справочника: {bad}")
         allowed = ITEM_CODES[o["type"]]
         items = o.get("items") or []
         codes = [i.get("code") for i in items if isinstance(i, dict)]
@@ -271,10 +287,13 @@ def validate(parsed, study_type=None):
 
 
 def attach_sources(parsed):
-    """Добавляет к каждому варианту и пункту source_ref — документ и страницы по id из справочника.
+    """Ссылки на документы по id из sources — только подтверждённые.
 
-    Страницы берутся из guidelines/*.json, а не из ответа модели: модель называет только id.
-    source = null — source_ref = null (предложение модели, не из документа).
+    Ссылка подтверждена, если в записи справочника есть это действие: для пункта — тот же тип варианта
+    и код, для варианта без пунктов (повторный приём, госпитализация) — тот же тип.
+    source_refs — подтверждённые ссылки (документ и страницы из guidelines/*.json, не из ответа модели);
+    unconfirmed_sources — id, которые модель указала, но в записи такого действия нет.
+    Пустой source_refs — предложение модели, не из документа.
     """
     if not isinstance(parsed, dict):
         return parsed
@@ -282,6 +301,13 @@ def attach_sources(parsed):
         if not isinstance(o, dict):
             continue
         for x in [o, *(o.get("items") or [])]:
-            if isinstance(x, dict) and "source" in x:
-                x["source_ref"] = cite(x["source"]) if x["source"] else None
+            if not isinstance(x, dict):
+                continue
+            ids = sources_of(x)
+            code = x.get("code") if x is not o else None
+            ok = [i for i in ids if entry_supports(i, o.get("type"), code)]
+            x["sources"] = ids
+            x["source_refs"] = [r for r in (cite(i) for i in ok) if r]
+            x["unconfirmed_sources"] = [i for i in ids if i not in ok]
+            x.pop("source", None)
     return parsed
