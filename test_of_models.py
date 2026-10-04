@@ -8,7 +8,7 @@ import time
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from analysis import build_messages, parse_json, validate
+from analysis import attach_sources, build_messages, parse_json, validate
 
 load_dotenv()
 client = InferenceClient(token=os.environ["HF_TOKEN"])
@@ -37,6 +37,26 @@ def report_text(t):
     return "\n".join(parts)
 
 
+def check_expected(parsed, expected):
+    """Ожидания из справочника.
+
+    must_include — список групп; в каждой группе должен найтись хотя бы один элемент:
+    {"code", "source"} — пункт варианта, {"type", "source"} — сам вариант (например, повторный приём).
+    must_not — коды, которых не должно быть ни в одном пункте.
+    """
+    if not expected:
+        return None
+    options = [o for o in (parsed or {}).get("options", []) if isinstance(o, dict)]
+    items = [i for o in options for i in o.get("items") or [] if isinstance(i, dict)]
+    got = {("code", i.get("code"), i.get("source")) for i in items}
+    got |= {("type", o.get("type"), o.get("source")) for o in options}
+    key = lambda g: ("code", g["code"], g["source"]) if "code" in g else ("type", g["type"], g["source"])
+    problems = [f"нет ни одного из {[(g.get('code') or g.get('type')) + '/' + g['source'] for g in group]}"
+                for group in expected.get("must_include", []) if not any(key(g) in got for g in group)]
+    problems += [f"есть запрещённый код {c}" for c in expected.get("must_not", []) if c in {i.get("code") for i in items}]
+    return problems
+
+
 def ask(model, t):
     resp = client.chat_completion(
         model=model,
@@ -47,8 +67,11 @@ def ask(model, t):
     return resp.choices[0].message.content or ""  # при нехватке токенов content бывает None
 
 
-def main(tests_path="tests.md"):
+def main(tests_path="tests.md", *only_ids):
+    """python test_of_models.py tests.md mmg_101 ct_chest_101 — только перечисленные тесты."""
     tests = load_tests(tests_path)
+    if only_ids:
+        tests = [t for t in tests if t["id"] in only_ids]
     results = []
     for model in MODELS:
         for t in tests:
@@ -58,7 +81,9 @@ def main(tests_path="tests.md"):
             except Exception as e:
                 raw = f"ERROR: {e}"
             parsed = parse_json(raw)
-            errors = validate(parsed)
+            errors = validate(parsed, t["study_type"])
+            expected = check_expected(parsed, t.get("expected"))
+            parsed = attach_sources(parsed)  # документ и страницы по source
             results.append({
                 "model": model,
                 "id": t["id"],
@@ -67,11 +92,14 @@ def main(tests_path="tests.md"):
                 "valid_json": parsed is not None,
                 "valid_format": not errors,
                 "errors": errors,
+                "expected_problems": expected,  # None — у теста нет ожиданий
                 "sec": round(time.time() - start, 2),
             })
             print(
                 f"[{model}] {t['id']}: json={'ok' if parsed else 'FAIL'} "
-                f"format={'ok' if not errors else 'FAIL'} {results[-1]['sec']}s"
+                f"format={'ok' if not errors else 'FAIL'} "
+                + ("" if expected is None else f"guideline={'ok' if not expected else 'FAIL'} ")
+                + f"{results[-1]['sec']}s"
             )
 
     out = f"results_{time.strftime('%Y%m%d_%H%M%S')}.json"  # не затирать прошлые прогоны
