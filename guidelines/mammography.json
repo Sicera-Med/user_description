@@ -6,7 +6,7 @@
       "id": "birads_0",
       "finding": "BI-RADS 0 — обследование неполное",
       "match": [
-        "bi-rads 0"
+        "birads 0"
       ],
       "actions": [
         {
@@ -27,7 +27,7 @@
       "id": "birads_1",
       "finding": "BI-RADS 1 — изменений нет",
       "match": [
-        "bi-rads 1"
+        "birads 1"
       ],
       "actions": [
         {
@@ -56,7 +56,7 @@
       "id": "birads_2",
       "finding": "BI-RADS 2 — доброкачественные изменения",
       "match": [
-        "bi-rads 2"
+        "birads 2"
       ],
       "actions": [
         {
@@ -85,7 +85,7 @@
       "id": "birads_3",
       "finding": "BI-RADS 3 — вероятно доброкачественные изменения",
       "match": [
-        "bi-rads 3"
+        "birads 3"
       ],
       "actions": [
         {
@@ -108,7 +108,7 @@
       "id": "birads_4",
       "finding": "BI-RADS 4 (4A/4B/4C) — подозрение на злокачественный процесс",
       "match": [
-        "bi-rads 4"
+        "birads 4"
       ],
       "actions": [
         {
@@ -129,7 +129,7 @@
       "id": "birads_5",
       "finding": "BI-RADS 5 — достоверно злокачественные изменения",
       "match": [
-        "bi-rads 5"
+        "birads 5"
       ],
       "actions": [
         {
@@ -150,7 +150,7 @@
       "id": "birads_6",
       "finding": "BI-RADS 6 — гистологически подтверждённый рак",
       "match": [
-        "bi-rads 6"
+        "birads 6"
       ],
       "actions": [
         {
@@ -166,6 +166,125 @@
       "verified_by": null,
       "scope": "Категория ставится по каждой молочной железе отдельно; тактика — по каждой железе.",
       "not_in_source": "Конкретный специалист (онколог, маммолог) в методичке не указан."
+    },
+    {
+      "id": "order404_mmg",
+      "finding": "Профилактическая маммография без патологии",
+      "match": [
+        "birads 1",
+        "birads 2",
+        "без патолог",
+        "не выявлен",
+        "норм",
+        "профилакт",
+        "скрининг"
+      ],
+      "actions": [
+        {
+          "type": "additional_research",
+          "code": "mammography",
+          "note": "маммография обеих желёз в двух проекциях с двойным прочтением для женщин 40–75 лет",
+          "timing": "1 раз в 2 года"
+        }
+      ],
+      "source": {
+        "doc": "order_404n",
+        "pages": "51"
+      },
+      "verified_by": null,
+      "note": "Не проводится, если в предшествующие 12 месяцев была маммография или КТ молочных желёз."
+    },
+    {
+      "id": "kr_dysplasia_followup",
+      "finding": "Узловые образования молочных желёз BI-RADS 1–3 (в т.ч. кисты)",
+      "match": [
+        "birads 1",
+        "birads 2",
+        "birads 3",
+        "кист",
+        "узлов",
+        "фиброаден",
+        "образовани"
+      ],
+      "actions": [
+        {
+          "type": "repeat_appointment",
+          "code": null,
+          "note": "физикальный осмотр 1 раз в 3–6 мес",
+          "timing": "1 раз в 3–6 месяцев"
+        },
+        {
+          "type": "additional_research",
+          "code": "ultrasound",
+          "note": "УЗИ молочных желёз (при необходимости с маммографией) в течение 1–2 лет",
+          "timing": "1 раз в 6–12 месяцев"
+        }
+      ],
+      "source": {
+        "doc": "kr_breast_dysplasia",
+        "pages": "34–35"
+      },
+      "verified_by": null,
+      "note": "Режим наблюдения и кратность определяет врач-онколог; при росте или усилении подозрения — биопсия."
+    },
+    {
+      "id": "kr_breast_suspected",
+      "finding": "Подозрение на рак молочной железы (BI-RADS 4–5)",
+      "match": [
+        "birads 4",
+        "birads 5",
+        "подозрит",
+        "злокачеств",
+        "рак ",
+        "спикул"
+      ],
+      "actions": [
+        {
+          "type": "additional_research",
+          "code": "biopsy",
+          "note": "прицельная пункционная (трепан-) биопсия под рентгенологическим или УЗ-контролем"
+        },
+        {
+          "type": "specialist_consult",
+          "code": "oncologist",
+          "note": "направление в центр амбулаторной онкологической помощи или первичный онкологический кабинет; консультация не позднее 5 рабочих дней с даты направления",
+          "timing": "не позднее 5 рабочих дней",
+          "condition": "при подозрении на злокачественное новообразование"
+        }
+      ],
+      "source": {
+        "doc": "kr_breast_cancer",
+        "pages": "30, 82"
+      },
+      "verified_by": null
+    },
+    {
+      "id": "kr_dysplasia_biopsy",
+      "finding": "Подозрение на злокачественный процесс при дисплазии / сложные кисты BI-RADS 4–5",
+      "match": [
+        "birads 4",
+        "birads 5",
+        "сложн",
+        "подозрит",
+        "кист"
+      ],
+      "actions": [
+        {
+          "type": "additional_research",
+          "code": "biopsy",
+          "note": "трепан-биопсия (при сложной кисте — биопсия пристеночного компонента); выполняется врачом-онкологом"
+        },
+        {
+          "type": "specialist_consult",
+          "code": "oncologist",
+          "note": "биопсию выполняет врач-онколог"
+        }
+      ],
+      "source": {
+        "doc": "kr_breast_dysplasia",
+        "pages": "21, 23"
+      },
+      "verified_by": null
     }
   ]
 }

@@ -3,11 +3,12 @@ import json
 import re
 
 from bft_templates import TEMPLATES, find_template, render_template
-from guidelines import cite, entry_ids, guideline_key, render_guidelines
+from guidelines import cite, entry_ids, guideline_key, render_guidelines, select_entries
 
 # Справочники кодов, которыми модель отвечает
 RECOMMENDATION_TYPES = {
     "repeat_appointment": "Повторный приём у лечащего врача",
+    "urgent_hospitalization": "Экстренная госпитализация",
     "specialist_consult": "Консультация специалиста",
     "additional_research": "Дополнительное исследование",
 }
@@ -22,6 +23,8 @@ SPECIALISTS = {
     "gastroenterologist": "Гастроэнтеролог",
     "endocrinologist": "Эндокринолог",
     "urologist": "Уролог",
+    "vascular_surgeon": "Сердечно-сосудистый (сосудистый) хирург",
+    "radiotherapist": "Радиотерапевт",
 }
 RESEARCH_TYPES = {
     "ct": "Компьютерная томография",
@@ -31,6 +34,10 @@ RESEARCH_TYPES = {
     "ultrasound": "УЗИ",
     "mammography": "Маммография",
     "ldct": "Низкодозная КТ (НДКТ)",
+    "ct_angiography": "КТ-ангиография",
+    "mri_contrast": "МРТ с контрастированием",
+    "adrenal_ct": "КТ надпочечников по протоколу с вымыванием или МРТ с химическим сдвигом",
+    "echocardiography": "Эхокардиография (ЭхоКГ)",
     "xray": "Рентгенография",
     "biopsy": "Биопсия",
     "bronchoscopy": "Бронхоскопия",
@@ -97,7 +104,7 @@ SYSTEM_PROMPT = """Ты — ассистент врача (система под
    или несколько исследований, если находок несколько или одной недостаточно:
    - specialist_consult — коды из списка «Специалисты»;
    - additional_research — коды из списка «Исследования»;
-   - repeat_appointment — items пустой.
+   - repeat_appointment, urgent_hospitalization — items пустой.
    У каждого item укажи reason — какая находка из протокола требует именно его.
    Без повторов. Если подходящего кода нет — выбери ближайший и не придумывай новых кодов.
 4. reasons — все значимые находки протокола, от главной к второстепенной:
@@ -114,6 +121,8 @@ SYSTEM_PROMPT = """Ты — ассистент врача (система под
    - Действия, которых нет в справочнике, добавляй только если они следуют из протокола,
      и ставь source = null: врач увидит, что это предложение модели, а не документа.
    - timing — срок из справочника; если в справочнике срока нет — null, не придумывай.
+   - Если справочник показан частично и для значимой находки нет записи или данных не хватает
+     для решения — добавь в ответ "need_full_guidelines": true (остальные поля заполни как сможешь).
 
 Варианты (options[].type):
 """ + "\n".join(f"- {k}: {v}" for k, v in RECOMMENDATION_TYPES.items()) + """
@@ -159,8 +168,17 @@ def template_key(study_type):
     return next((k for k, v in TEMPLATES.items() if v is tpl), None) if tpl else None
 
 
-def build_messages(study_type, report_text, patient_context=None):
-    """Системный промт + шаблон только этого типа исследования; в сообщении — протокол."""
+def guidelines_partial(study_type, report_text):
+    """True — по словам протокола в промт попадёт только часть справочника."""
+    key = guideline_key(study_type, template_key(study_type))
+    return bool(key) and select_entries(key, report_text)[1]
+
+
+def build_messages(study_type, report_text, patient_context=None, full_guidelines=False):
+    """Системный промт + шаблон этого типа исследования + справочник; в сообщении — протокол.
+
+    Справочник — по словам из match (full_guidelines=False) или целиком (True).
+    """
     key = template_key(study_type)
     label = TEMPLATES[key]["label"] if key else study_type
     template = render_template(key) if key else f"Шаблон протокола для «{label}» в БФТ не найден."
@@ -170,7 +188,7 @@ def build_messages(study_type, report_text, patient_context=None):
         sex = {"m": "мужской", "f": "женский"}.get(ctx.get("sex"), "не указан")
         user.append(f"Пациент: возраст {ctx.get('age', 'не указан')}, пол {sex}")
     user.append(f"Протокол:\n{report_text}")
-    guide = render_guidelines(guideline_key(study_type, key))
+    guide = render_guidelines(guideline_key(study_type, key), report_text, full=full_guidelines)
     return [
         {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + template + "\n\n" + guide},
         {"role": "user", "content": "\n\n".join(user)},
@@ -190,6 +208,7 @@ ITEM_CODES = {
     "specialist_consult": SPECIALISTS,
     "additional_research": RESEARCH_TYPES,
     "repeat_appointment": {},
+    "urgent_hospitalization": {},
 }
 
 
@@ -230,9 +249,9 @@ def validate(parsed, study_type=None):
         allowed = ITEM_CODES[o["type"]]
         items = o.get("items") or []
         codes = [i.get("code") for i in items if isinstance(i, dict)]
-        if o["type"] == "repeat_appointment":
+        if not allowed:  # варианты без пунктов: повторный приём, экстренная госпитализация
             if items:
-                errors.append("repeat_appointment: items должен быть пустым")
+                errors.append(f"{o['type']}: items должен быть пустым")
             continue
         if not codes:
             errors.append(f"{o['type']}: пустой items")

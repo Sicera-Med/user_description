@@ -8,7 +8,7 @@ import time
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from analysis import attach_sources, build_messages, parse_json, validate
+from analysis import attach_sources, build_messages, guidelines_partial, parse_json, validate
 
 load_dotenv()
 client = InferenceClient(token=os.environ["HF_TOKEN"])
@@ -57,14 +57,27 @@ def check_expected(parsed, expected):
     return problems
 
 
-def ask(model, t):
+def _call(model, messages):
     resp = client.chat_completion(
-        model=model,
-        messages=build_messages(t["study_type"], report_text(t)),
+        model=model, messages=messages,
         max_tokens=4096,  # рассуждающим MoE-моделям нужен запас
         temperature=0.2,
     )
     return resp.choices[0].message.content or ""  # при нехватке токенов content бывает None
+
+
+def ask(model, t):
+    """Справочник по словам протокола; если модель просит весь справочник — второй запрос с полным.
+
+    Возвращает (ответ, режим справочника).
+    """
+    text = report_text(t)
+    if not guidelines_partial(t["study_type"], text):
+        return _call(model, build_messages(t["study_type"], text)), "весь файл"
+    raw = _call(model, build_messages(t["study_type"], text))
+    if (parse_json(raw) or {}).get("need_full_guidelines") is True:
+        return _call(model, build_messages(t["study_type"], text, full_guidelines=True)), "весь файл по запросу модели"
+    return raw, "по словам протокола"
 
 
 def main(tests_path="tests.md", *only_ids):
@@ -77,9 +90,9 @@ def main(tests_path="tests.md", *only_ids):
         for t in tests:
             start = time.time()
             try:
-                raw = ask(model, t)
+                raw, mode = ask(model, t)
             except Exception as e:
-                raw = f"ERROR: {e}"
+                raw, mode = f"ERROR: {e}", None
             parsed = parse_json(raw)
             errors = validate(parsed, t["study_type"])
             expected = check_expected(parsed, t.get("expected"))
@@ -93,13 +106,14 @@ def main(tests_path="tests.md", *only_ids):
                 "valid_format": not errors,
                 "errors": errors,
                 "expected_problems": expected,  # None — у теста нет ожиданий
+                "guidelines_mode": mode,
                 "sec": round(time.time() - start, 2),
             })
             print(
                 f"[{model}] {t['id']}: json={'ok' if parsed else 'FAIL'} "
                 f"format={'ok' if not errors else 'FAIL'} "
                 + ("" if expected is None else f"guideline={'ok' if not expected else 'FAIL'} ")
-                + f"{results[-1]['sec']}s"
+                + f"справочник: {mode} {results[-1]['sec']}s"
             )
 
     out = f"results_{time.strftime('%Y%m%d_%H%M%S')}.json"  # не затирать прошлые прогоны

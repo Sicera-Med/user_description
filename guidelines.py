@@ -6,6 +6,7 @@
 import glob
 import json
 import os
+import re
 
 DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "guidelines")
 SOURCES = json.load(open(os.path.join(DIR, "sources.json"), encoding="utf-8"))["sources"]
@@ -45,6 +46,26 @@ def entry_ids(key):
     return {e["id"] for e in entries_for(key)}
 
 
+def _norm(text):
+    """Для поиска по match: нижний регистр, ё → е, «BI-RADS»/«bi rads» → «birads», одиночные пробелы."""
+    t = (text or "").lower().replace("ё", "е")
+    t = re.sub(r"bi[\s\-]?rads", "birads", t)
+    return re.sub(r"\s+", " ", t)
+
+
+def select_entries(key, report_text):
+    """Записи, у которых хоть одно слово из match есть в протоколе. Ничего не нашлось — весь файл.
+
+    Возвращает (записи, partial): partial=True — показана только часть справочника.
+    """
+    entries = entries_for(key)
+    text = _norm(report_text)
+    found = [e for e in entries if any(_norm(m) in text for m in e.get("match", []))]
+    if not found or len(found) == len(entries):
+        return entries, False
+    return found, True
+
+
 def _action(a):
     what = a["code"] or "без кода"
     line = f"{a['type']}: {what} — {a['note']}"
@@ -55,12 +76,19 @@ def _action(a):
     return line
 
 
-def render_guidelines(key):
-    """Текст для промта: только записи этого типа исследования, сгруппированные по документу."""
-    entries = entries_for(key)
-    if not entries:
+def render_guidelines(key, report_text=None, full=False):
+    """Текст для промта: записи этого типа исследования, сгруппированные по документу.
+
+    report_text задан и full=False — только записи, найденные по словам протокола (select_entries).
+    """
+    if not entries_for(key):
         return "Справочника по этому типу исследования нет: все действия помечай source = null."
+    entries, partial = (entries_for(key), False) if full or report_text is None else select_entries(key, report_text)
     lines = ["Справочник «находка → действие» из официальных документов. id записи в [] — значение source."]
+    if partial:
+        lines.append(f"Показаны только записи, найденные по словам протокола ({len(entries)} из {len(entries_for(key))}). "
+                     "Если для значимой находки записи нет или данных не хватает для решения — "
+                     "верни \"need_full_guidelines\": true, и тебе покажут весь справочник.")
     for doc in dict.fromkeys(e["source"]["doc"] for e in entries):
         group = [e for e in entries if e["source"]["doc"] == doc]
         src = SOURCES[doc]

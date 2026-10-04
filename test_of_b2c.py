@@ -346,6 +346,8 @@ def build_next_step(decision):
         raise ValueError(f"doctor_decision: коды не из справочника: {unknown}")
 
     items = []
+    if "urgent_hospitalization" in chosen:
+        items.append("экстренная госпитализация")
     if "repeat_appointment" in chosen:
         items.append("повторный приём у лечащего врача")
     if "specialist_consult" in chosen:
