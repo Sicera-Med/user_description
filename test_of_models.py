@@ -12,8 +12,8 @@ from bft_templates import find_template, render_template
 load_dotenv()
 client = InferenceClient(token=os.environ["HF_TOKEN"])
 
-MODELS = [
-    "Qwen/Qwen2.5-72B-Instruct"]
+# MODEL в .env: одна модель или несколько через запятую
+MODELS = [m.strip() for m in os.environ["MODEL"].split(",") if m.strip()]
 
 # Словарь сокращений: глоссарий БФТ ДЗМ (стр. 4) + шкалы и обозначения из текста БФТ
 ABBREVIATIONS = {
@@ -139,10 +139,10 @@ def ask(model, t):
             {"role": "system", "content": system_prompt_for(t["study_type"])},
             {"role": "user", "content": build_input(t)},
         ],
-        max_tokens=1024,
+        max_tokens=4096,  # рассуждающим MoE-моделям нужен запас
         temperature=0.2,
     )
-    return resp.choices[0].message.content
+    return resp.choices[0].message.content or ""  # при нехватке токенов content бывает None
 
 
 def parse_json(raw):
@@ -175,8 +175,10 @@ def main(tests_path="tests.md"):
             })
             print(f"[{model}] {t['id']}: json={'ok' if parsed else 'FAIL'} {results[-1]['sec']}s")
 
-    with open("results.json", "w", encoding="utf-8") as f:
+    out = f"results_{time.strftime('%Y%m%d_%H%M%S')}.json"  # не затирать прошлые прогоны
+    with open(out, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
+    print(f"Результаты: {out}")
 
 
 if __name__ == "__main__":
