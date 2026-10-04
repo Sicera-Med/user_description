@@ -3,17 +3,26 @@ import os
 import re
 import sys
 import time
-from copy import deepcopy
 
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from bft_templates import find_template, render_template
+from analysis import RECOMMENDATION_TYPES, RESEARCH_TYPES, SPECIALISTS
+from bft_templates import TEMPLATES, find_template, render_template
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_TESTS_PATH = os.path.join(BASE_DIR, "tests.md")
 RESULTS_PATH = os.path.join(BASE_DIR, "results_b2c.json")
+# Заглушка: ссылка на страницу результата появится, когда будет сайт
+RESULTS_URL = "https://example.com/results/{study_id}"
+
+# Названия исследований для пациента — без аббревиатур (ключи — шаблоны БФТ)
+PATIENT_STUDY_NAMES = {
+    "xray_chest": "рентгенография органов грудной клетки",
+    "ct_chest": "компьютерная томография органов грудной клетки",
+    "mammography": "маммография",
+}
 
 
 load_dotenv()
@@ -61,11 +70,11 @@ PATIENT_SYSTEM_PROMPT = """Ты — медицинский информацио�
 Пользователь — пациент, который получил результат лучевого исследования.
 
 Твоя задача:
-1. Сформировать короткое уведомление о готовности результата.
-2. Объяснить описание и заключение простым и понятным языком.
-3. Объяснить медицинские термины, которые могут быть непонятны пациенту.
-4. Если в ЗАКЛЮЧЕНИИ прямо указана рекомендация записаться на консультацию
-   или приём к врачу/специалисту, вынести её в отдельный блок next_step.
+1. Объяснить описание и заключение простым и понятным языком.
+2. Объяснить медицинские термины, которые могут быть непонятны пациенту.
+
+Что делать дальше, решает лечащий врач. Его решение система покажет пациенту
+отдельно, после твоего ответа. Ты дальнейшие шаги не формулируешь.
 
 Ты выполняешь только информационное объяснение уже существующего медицинского заключения.
 
@@ -102,14 +111,8 @@ PATIENT_SYSTEM_PROMPT = """Ты — медицинский информацио�
 - дополнительные исследования;
 - консультации специалистов.
 
-Если консультация специалиста прямо указана в исходном ЗАКЛЮЧЕНИИ,
-это не считается твоим назначением: такую рекомендацию нужно только
-аккуратно передать пациенту в next_step.
-
-6. Не формируй самостоятельно медицинский маршрут пациента.
-Не делай вывод о необходимости консультации только по находкам, диагнозу,
-числовым показателям или BFT. next_step разрешён только тогда, когда
-рекомендация на консультацию/приём прямо присутствует в поле "Заключение".
+6. Не формируй медицинский маршрут пациента и не пересказывай рекомендации
+из заключения как указание к действию: дальнейшие шаги пациенту сообщает врач.
 
 7. Медицинские термины объясняй простыми словами,
 но не искажай их медицинский смысл.
@@ -163,29 +166,7 @@ PATIENT_SYSTEM_PROMPT = """Ты — медицинский информацио�
 дополнительных медицинских деталей.
 
 
-20. Анализируй поле "Заключение" на наличие явной рекомендации о консультации
-или приёме у врача/специалиста.
-
-Примеры явной рекомендации:
-- "Рекомендуется консультация кардиолога."
-- "Консультация пульмонолога."
-- "Рекомендован приём терапевта."
-
-21. Если такая рекомендация прямо есть в ЗАКЛЮЧЕНИИ:
-- верни "next_step.required": true;
-- в "next_step.text" передай смысл рекомендации без добавления новых назначений;
-- в "next_step.button_label" укажи понятную подпись кнопки.
-  Например: "Записаться к кардиологу".
-
-22. Если рекомендации на консультацию/приём в ЗАКЛЮЧЕНИИ нет:
-"next_step": null
-
-23. Не создавай next_step только потому, что обнаружена патология.
-Например, наличие кардиомегалии само по себе НЕ разрешает тебе добавлять
-"Рекомендуется консультация кардиолога", если этой рекомендации нет в заключении.
-
-24. Не создавай URL и не вставляй ссылки. Ссылка на запись добавляется системой
-после твоего ответа."
+20. Не создавай URL и не вставляй ссылки.
 
 СОКРАЩЕНИЯ:
 
@@ -200,29 +181,17 @@ PATIENT_SYSTEM_PROMPT = """Ты — медицинский информацио�
 Формат ответа:
 
 {
-  "notification": {
-    "title": "Готов результат исследования",
-    "text": "короткое понятное уведомление для пациента"
-  },
   "summary": "краткое объяснение результата исследования простым языком",
   "explanations": [
     {
       "term": "медицинский термин из описания или заключения",
       "explanation": "простое объяснение этого термина"
     }
-  ],
-  "next_step": {
-    "required": true,
-    "text": "рекомендация, которая прямо указана в заключении",
-    "button_label": "Записаться к специалисту"
-  }
+  ]
 }
 
 Если специальных медицинских терминов, требующих объяснения, нет:
 "explanations": []
-
-Если в заключении нет явной рекомендации на консультацию/приём:
-"next_step": null
 """
 
 
@@ -252,9 +221,8 @@ def load_tests(path):
 def build_input(t):
     """Формирование входа для B2C-LLM.
 
-    Подтверждённый маршрут пациента сюда не передаётся.
-    LLM только объясняет результат исследования.
-    Маршрут и ссылка добавляются позже программно.
+    Решение врача сюда не передаётся: LLM только объясняет результат исследования,
+    дальнейшие шаги добавляет код из doctor_decision (build_next_step).
     """
 
     tpl = find_template(t["study_type"])
@@ -342,16 +310,6 @@ def validate_b2c_response(data):
     if not isinstance(data, dict):
         return False
 
-    notification = data.get("notification")
-    if not isinstance(notification, dict):
-        return False
-
-    if not isinstance(notification.get("title"), str):
-        return False
-
-    if not isinstance(notification.get("text"), str):
-        return False
-
     if not isinstance(data.get("summary"), str):
         return False
 
@@ -367,67 +325,96 @@ def validate_b2c_response(data):
         if not isinstance(item.get("explanation"), str):
             return False
 
-    next_step = data.get("next_step")
-    if next_step is not None:
-        if not isinstance(next_step, dict):
-            return False
-        if next_step.get("required") is not True:
-            return False
-        if not isinstance(next_step.get("text"), str) or not next_step["text"].strip():
-            return False
-        button_label = next_step.get("button_label")
-        if button_label is not None and not isinstance(button_label, str):
-            return False
-
     return True
 
 
-def build_next_step(parsed):
-    """Добавляет единую ссылку только к рекомендации, найденной LLM в заключении.
+def build_next_step(decision):
+    """Дальнейшие шаги для пациента — из решения врача, не из ответа LLM.
 
-    LLM не генерирует URL. Если next_step отсутствует, ссылка не добавляется.
+    decision: {"chosen_types": [...], "specialists": [...], "research_types": [...], "comment": ...}
+    Коды — из справочников analysis.py, как в ответе модели врачу. Нет решения — None.
     """
 
-    route = parsed.get("next_step")
-
-    if not isinstance(route, dict):
+    if not decision or not decision.get("chosen_types"):
         return None
 
-    if route.get("required") is not True:
-        return None
+    chosen = decision["chosen_types"]
+    unknown = [c for c in chosen if c not in RECOMMENDATION_TYPES]
+    unknown += [c for c in decision.get("specialists", []) if c not in SPECIALISTS]
+    unknown += [c for c in decision.get("research_types", []) if c not in RESEARCH_TYPES]
+    if unknown:
+        raise ValueError(f"doctor_decision: коды не из справочника: {unknown}")
 
-    text_value = route.get("text")
-    button_label = route.get("button_label", "Записаться на приём")
+    items = []
+    if "repeat_appointment" in chosen:
+        items.append("повторный приём у лечащего врача")
+    if "specialist_consult" in chosen:
+        who = ", ".join(SPECIALISTS[c].lower() for c in decision.get("specialists", []))
+        items.append(f"консультация: {who or 'специалист'}")
+    if "additional_research" in chosen:
+        what = ", ".join(RESEARCH_TYPES[c] for c in decision.get("research_types", []))
+        items.append(f"обследование: {what or 'по назначению врача'}")
 
-    if not isinstance(text_value, str) or not text_value.strip():
-        return None
-
-    if not isinstance(button_label, str) or not button_label.strip():
-        button_label = "Записаться на приём"
+    text = "Ваш лечащий врач рекомендует: " + "; ".join(items) + "."
+    if decision.get("comment"):
+        text += f" Комментарий врача: {decision['comment']}"
 
     return {
         "required": True,
-        "text": text_value.strip(),
+        "text": text,
         "action": {
-            "label": button_label.strip()
+            "label": "Записаться на приём"
         },
     }
 
 
-def attach_next_step(parsed):
-    """Заменяет LLM-блок next_step на финальный блок с системной ссылкой."""
+def study_name(study_type):
+    """Название исследования для пациента; нет в словаре — как в данных."""
+    tpl = find_template(study_type)
+    key = next((k for k, v in TEMPLATES.items() if v is tpl), None) if tpl else None
+    return PATIENT_STUDY_NAMES.get(key, study_type)
+
+
+def build_notification(t):
+    """Сообщение 1 (SMS/мессенджер): только факт готовности и ссылка. Без медицинских данных."""
+
+    name = (t.get("patient_name") or "").strip()
+    greeting = f"Здравствуйте, {name}!" if name else "Здравствуйте!"
+    url = RESULTS_URL.format(study_id=t["id"])
+    return (
+        f"{greeting} Готов результат исследования: {study_name(t['study_type'])}. "
+        f"Результаты доступны по ссылке: {url}"
+    )
+
+
+def build_site_summary(t, parsed):
+    """Сообщение 2 (страница на сайте): объяснение от LLM + решение врача (код)."""
 
     if parsed is None:
         return None
 
-    result = deepcopy(parsed)
-    result["next_step"] = build_next_step(parsed)
+    next_step = build_next_step(t.get("doctor_decision"))
+    parts = [parsed["summary"].strip()]
+    if parsed["explanations"]:
+        parts.append("Что означают термины:\n" + "\n".join(
+            f"• {e['term']} — {e['explanation']}" for e in parsed["explanations"]
+        ))
+    parts.append(next_step["text"] if next_step else
+                 "Решение о дальнейших шагах врач ещё не принял — мы сообщим, когда оно появится.")
 
-    return result
+    return {
+        "title": f"Результат исследования: {study_name(t['study_type'])}",
+        "explanation": parsed["summary"].strip(),
+        "terms": parsed["explanations"],
+        "doctor_recommendation": next_step,
+        "text": "\n\n".join(parts),
+    }
 
 
 def main(tests_path=DEFAULT_TESTS_PATH):
     tests = load_tests(tests_path)
+    for t in tests:  # ошибки в решениях врача — до запросов к модели
+        build_next_step(t.get("doctor_decision"))
     results = []
 
     for model in MODELS:
@@ -442,17 +429,14 @@ def main(tests_path=DEFAULT_TESTS_PATH):
             model_parsed = parse_json(raw)
             model_schema_valid = validate_b2c_response(model_parsed)
 
-            if model_schema_valid:
-                final_parsed = attach_next_step(model_parsed)
-            else:
-                final_parsed = None
 
             result = {
                 "model": model,
                 "id": t["id"],
                 "pipeline": "b2c",
                 "raw": raw,
-                "parsed": final_parsed,
+                "notification": build_notification(t),  # не зависит от модели
+                "site_summary": build_site_summary(t, model_parsed if model_schema_valid else None),
                 "valid_json": model_parsed is not None,
                 "valid_schema": model_schema_valid,
                 "sec": round(
