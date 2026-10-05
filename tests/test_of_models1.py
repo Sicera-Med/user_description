@@ -1,4 +1,4 @@
-"""Прогон тестов из tests/tests.md через модели из .env (промт и проверка ответа — analysis.py).
+"""Прогон тестов из tests/cases.md через модели из .env (промт и проверка ответа — analysis.py).
 
 Результаты — новый файл на каждый прогон в tests/results/.
 """
@@ -18,7 +18,7 @@ RESULTS_DIR = os.path.join(TESTS_DIR, "results")
 
 
 def tests_file(path):
-    """Путь к файлу тестов: как указан или по имени из папки tests/ («tests.md» → tests/tests.md)."""
+    """Путь к файлу тестов: как указан или по имени из папки tests/ («cases.md» → tests/cases.md)."""
     return path if os.path.exists(path) else os.path.join(TESTS_DIR, path)
 
 
@@ -93,8 +93,8 @@ def ask(model, t):
     return raw, "по словам протокола"
 
 
-def main(tests_path="tests.md", *only_ids):
-    """python test_of_models.py tests.md mmg_101 ct_chest_101 — только перечисленные тесты."""
+def main(tests_path="cases.md", *only_ids):
+    """python test_of_models.py cases.md mmg_01 ct_chest_02 — только перечисленные тесты."""
     tests = load_tests(tests_file(tests_path))
     if only_ids:
         tests = [t for t in tests if t["id"] in only_ids]

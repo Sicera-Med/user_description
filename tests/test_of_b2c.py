@@ -12,7 +12,7 @@ from bft_templates import TEMPLATES, find_template, render_template
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_TESTS_PATH = os.path.join(BASE_DIR, "tests", "tests.md")
+DEFAULT_TESTS_PATH = os.path.join(BASE_DIR, "tests", "cases.md")
 RESULTS_DIR = os.path.join(BASE_DIR, "tests", "results")  # новый файл на каждый прогон
 # Заглушка: ссылка на страницу результата появится, когда будет сайт
 RESULTS_URL = "https://example.com/results/{study_id}"
@@ -414,7 +414,7 @@ def build_site_summary(t, parsed):
 
 
 def main(tests_path=DEFAULT_TESTS_PATH):
-    if not os.path.exists(tests_path):  # «tests.md» → tests/tests.md
+    if not os.path.exists(tests_path):  # «cases.md» → tests/cases.md
         tests_path = os.path.join(BASE_DIR, "tests", tests_path)
     os.makedirs(RESULTS_DIR, exist_ok=True)
     results_path = os.path.join(RESULTS_DIR, f"results_b2c_{time.strftime('%Y%m%d_%H%M%S')}.json")
